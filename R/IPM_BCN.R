@@ -99,7 +99,9 @@ if(!load.workspace){
   # shapefile for plotting
   # spain <- readOGR(dsn=".",layer="inland.spain_UTM")
   #spain <- readOGR(dsn=".",layer="CAT_UTM_v2")
-  spain <- readOGR(dsn="data",layer="bcn_UTM_v1")
+  #spain <- readOGR(dsn="data",layer="bcn_UTM_v1") Original But Deprecated
+  library(sf)
+  spain <- st_read("data/bcn_UTM_v1.shp")
   spain.df <- fortify(spain)
   ###########################################
   
@@ -372,6 +374,14 @@ if(!load.workspace){
     dbh.my.sp[[i.sp]] <- 7.5 + c(0:n.intervals.mesh)*(MAXDBH[i.sp]-7.5)/n.intervals.mesh
   }
   
+  ###########
+  # BIG LOOP
+  ###########
+  
+  # It seems that they run a kernel for each cell and each species and then 
+  # get an estimate for basal area of that species in that cell before moving 
+  # on to the next cell/species combination.
+  
   for(i in 1:nrow(aux.data)){
     if(aux.data$adult.trees[i] > 0){
       sp <- aux.data$num.sp[i]
@@ -383,14 +393,69 @@ if(!load.workspace){
                                                                  h = h,
                                                                  range.x = c(min(dbh.my.sp[[sp]]),max(dbh.my.sp[[sp]])),
                                                                  bandwidth.range = c(0.03,0.5))
+      # This is the code from the EstimateKernel Function
+      # {
+      # # Set variables for the function
+      # range.x = c(min(dbh.my.sp[[sp]]),max(dbh.my.sp[[sp]]))
+      # bandwidth.range = c(0.03,0.5)
+      # 
+      # bandwidth <- try(dpik(orig.data),silent=T)
+      # if (class(bandwidth)=="try-error") {
+      #   bandwidth <- try(bw.SJ(x=orig.data,nb=nx,method="dpi"),silent=T)
+      #   if (class(bandwidth)=="try-error") {
+      #     best.bw <- 0
+      #     best.value <- 10000
+      #     for(i.bw in seq(bandwidth.range[1],bandwidth.range[2],0.01)){
+      #       my.kernel <- suppressWarnings(bkde(x=orig.data,bandwidth=i.bw,gridsize=nx,range.x=range.x))
+      #       my.kernel <- my.kernel$y*length(orig.data)
+      #       estimated.count <- quad.trapez(my.kernel,h[sp],nx,1)
+      #       if(estimated.count - length(orig.data)<best.value){
+      #         best.value <- estimated.count - length(orig.data)
+      #         best.bw <- i.bw
+      #       }# if better
+      #     }# for bandwidth values
+      #     bandwidth <- best.bw
+      #   }# if bw.SJ fails
+      # }#if dpik fails 
+      # # multiply kernel by number of trees, as to get the integral right
+      # pre.out <- bkde(x=orig.data,
+      #             # kernel default is normal distribution
+      #             bandwidth=bandwidth,
+      #             gridsize=nx, # number of equally spaced points at which to estimate density, 
+      #                         # nx = number of intervals in the mesh + 1
+      #             range.x=range.x # vector containing min and max at which to compute estimate
+      #             )
+      # 
+      # # multiply kernel by number of trees, as to get the integral right
+      # out <- pre.out$y*length(orig.data)
+      # }
+      
       aux.data$predicted.basal.area[i] <- quadTrapezCpp_1(adult.trees[[sp]][aux.data$num.plot[i],]*x2[,sp],h[sp],nx)*pi
       
+      # The above line can be broken down into the following steps
+      # {
+      # # Take the kernel estimate and multiply it by the 
+      # q.test <- out*x2[,sp]
+      # 
+      # # They use the trapezoidal rule to approximate the integral that is needed
+      # # in the integral projection model. Instead of analytically solving the integral
+      # # they estimate it using this method.
+      # predicted.dbh <- quadTrapezCpp_1(q.test,h[sp],nx)
+      # 
+      # # multiplied by pi becuase the predicted values are dbh and they want area
+      # predicted.basal.area <- predicted.dbh*pi 
+      # }
+    
     }else{adult.trees[[aux.data$num.sp[i]]][aux.data$num.plot[i],] <- 0}
     if (round(i/10000)*10000==i) print(paste(date(),"- kernel smoothing: running loop",i,"of",nrow(aux.data),sep=" "))
     
   }# for i
   
   plot.predicted.ba <- aux.data %>% group_by(ID) %>% summarize(ba = sum(predicted.basal.area))
+  
+  ###########
+  # BIG LOOP
+  ###########
   
   for(i in 1:nrow(aux.data)){
     if(aux.data$predicted.basal.area[i]>0 & aux.data$saplings[i]>0){

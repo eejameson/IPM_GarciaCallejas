@@ -17,6 +17,10 @@
 #### to accept adult.trees[[NUM_SP]][NUM_PLOTS,nx]
 #### where each [NUM_PLOTS,nx] matrix is an ff object
 
+# In order to use this I would have to install GDAL on my computer, I will see
+# if I can manage without.
+#install.packages("/Users/ejameson/Desktop/R Packages/rgdal_1.6-7.tar.gz", repos = NULL, type="source")
+
 #library(plyr)
 library(ggplot2)
 library(MASS)
@@ -29,7 +33,7 @@ library(bbmle)
 library(reshape2)
 library(grid)
 library(gridExtra)
-library(rgdal)
+#library(rgdal)
 library(mclust)
 library(KernSmooth)
 library(dplyr)
