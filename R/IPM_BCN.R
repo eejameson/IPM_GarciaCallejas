@@ -521,7 +521,7 @@ if(!load.workspace){
                   spain.df,
                   path="./resultados/")
   }
-}else{
+}else{ # end of big if statement to load workspace
   load(file=paste(SIM_NUMBER,".RData",sep=""))
 #   rm(adult.trees)
 #   ffload(paste("trees_array_original_",SIM_NUMBER,"_",scenario,sep=""))
@@ -564,6 +564,7 @@ for(iyear in seq(2000,final.year,10)){
     ###################################################################################
     ###################################################################################
   }
+  
   
   # IPM loop        
   for (i in 1:NUM_PLOTS) {
@@ -663,11 +664,13 @@ for(iyear in seq(2000,final.year,10)){
         if(sapl[j] > 0 & (!BASAL.AREA.THRESHOLD | (sum(ba[i,]) < BA_threshold$perc_95[j]))){
 
           dummy <- IPMIngrowthIdentityCpp(y[,j],c(param.ingrowth1[j],param.ingrowth2[j]))
+          
           if(ALL.RESULTS){
             ###################################################################################
             results[[j]][i,my.new.adults] <- quadTrapezCpp_1(dummy,h[j],nx)
             ###################################################################################
           }
+          
           adult.trees[[j]][i,] <- adult.trees[[j]][i,] + dummy
           if(ALL.RESULTS){
             ###################################################################################
@@ -718,6 +721,8 @@ for(iyear in seq(2000,final.year,10)){
     # default 
     temp.suitable$suitable <- T
     order <- sample(x = 1:NUM_SP,size = NUM_SP,replace = F)
+    
+    
     for(i in order){
       
       # for every species:
@@ -745,9 +750,13 @@ for(iyear in seq(2000,final.year,10)){
       #apply colonization
       if(!is.null(nrow(suitable))){
         if(nrow(suitable)>0){
-          if(i %in% conifers) my.model <- colonization.glm[[1]]
-          else if(i %in% quercus) my.model <- colonization.glm[[2]]
-          else if(i %in% deciduous) my.model <- colonization.glm[[3]]
+          if(i %in% conifers) {
+            my.model <- colonization.glm[[1]]
+          }else if(i %in% quercus) {
+              my.model <- colonization.glm[[2]]
+          }else if(i %in% deciduous) {
+                my.model <- colonization.glm[[3]]
+                }
           
           suitable$colonized <- predict(my.model,newdata = suitable[,c(2,3)],type = "response")
           suitable$colonized <- ifelse(suitable$colonized > colonization.threshold,1,0)
